@@ -652,7 +652,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         if minutes not in [10, 15, 20, 30, 40]:
             return Response({"detail": "Choose a valid preparation time."}, status=400)
         with transaction.atomic():
-            order = Order.objects.select_for_update().select_related("merchant__user", "customer").get(pk=pk)
+            order = Order.objects.select_for_update(of=("self",)).select_related("merchant__user", "customer").get(pk=pk)
             if not order.merchant or order.merchant.user_id != request.user.id:
                 raise PermissionDenied("This order does not belong to your store.")
             if order.status != "new":
@@ -669,7 +669,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         if request.user.role != "captain":
             raise PermissionDenied("Only the assigned captain can report arrival.")
         with transaction.atomic():
-            order = Order.objects.select_for_update().select_related("captain__user", "merchant").get(pk=pk)
+            order = Order.objects.select_for_update(of=("self",)).select_related("captain__user", "merchant").get(pk=pk)
             if not order.captain or order.captain.user_id != request.user.id:
                 raise PermissionDenied("This order is not assigned to you.")
             if order.order_type != "store" or order.status != "assigned":
@@ -691,7 +691,7 @@ class OrderViewSet(viewsets.ModelViewSet):
             "customer": {"new": {"cancelled"}},
         }
         with transaction.atomic():
-            order = Order.objects.select_for_update().select_related("merchant__user", "captain__user", "customer").get(pk=pk)
+            order = Order.objects.select_for_update(of=("self",)).select_related("merchant__user", "captain__user", "customer").get(pk=pk)
             role = request.user.role
             if role == "merchant" and (not order.merchant or order.merchant.user_id != request.user.id):
                 raise PermissionDenied("This order does not belong to your store.")
@@ -729,7 +729,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         except CaptainProfile.DoesNotExist:
             raise PermissionDenied("Captain profile not found.")
         with transaction.atomic():
-            order = Order.objects.select_for_update().select_related("merchant__user", "customer").get(pk=pk)
+            order = Order.objects.select_for_update(of=("self",)).select_related("merchant__user", "customer").get(pk=pk)
             eligible_status = order.status == "new" if order.order_type == "ride" else order.status == "ready"
             if not eligible_status or order.captain_id is not None:
                 return Response({"detail": "Order is no longer available."}, status=409)
